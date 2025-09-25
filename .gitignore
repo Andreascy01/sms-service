@@ -43,3 +43,21 @@ nb-configuration.xml
 /.quarkus/cli/plugins/
 # TLS Certificates
 .certs/
+
+# Logs
+*.log
+
+# Backup files
+*~
+
+# Docker
+docker/*.log
+docker/*.pid
+
+# Test reports
+surefire-reports/
+failsafe-reports/
+
+# Quarkus dev mode cache
+.quarkus/
+
