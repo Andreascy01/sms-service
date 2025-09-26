@@ -2,13 +2,20 @@ package com.example.sms;
 
 import com.example.sms.dto.MessageRequest;
 import com.example.sms.Message;
+import com.example.sms.service.MessageService;
+
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import com.example.sms.service.MessageService;
-import jakarta.inject.Inject;
+
+import io.swagger.v3.oas.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,11 +24,15 @@ import java.util.UUID;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class MessageResource {
+
     @Inject
     MessageService messageService;
 
     @POST
     @Transactional
+    @Operation(summary = "Send a message", description = "Creates a new message with status PENDING and simulates sending it asynchronously.")
+    @APIResponse(responseCode = "202", description = "Message accepted for processing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Message.class)))
+    @APIResponse(responseCode = "400", description = "Invalid request body")
     public Response sendMessage(@Valid MessageRequest request) {
         Message message = new Message();
         message.id = UUID.randomUUID();
@@ -32,9 +43,8 @@ public class MessageResource {
         message.createdAt = LocalDateTime.now();
         message.updatedAt = LocalDateTime.now();
 
-        message.persist(); // Panache persists it to the DB
+        message.persist();
 
-        // Trigger async delivery simulation
         messageService.simulateDeliveryAsync(message.id);
 
         return Response.status(Response.Status.ACCEPTED).entity(message).build();
@@ -42,7 +52,11 @@ public class MessageResource {
 
     @GET
     @Path("/{id}")
-    public Response getMessage(@PathParam("id") UUID id) {
+    @Operation(summary = "Get a message by ID", description = "Retrieve a single message by its UUID.")
+    @APIResponse(responseCode = "200", description = "Message found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Message.class)))
+    @APIResponse(responseCode = "404", description = "Message not found")
+    public Response getMessage(
+            @Parameter(description = "UUID of the message") @PathParam("id") UUID id) {
         Message message = Message.findById(id);
         if (message == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -51,10 +65,11 @@ public class MessageResource {
     }
 
     @GET
+    @Operation(summary = "List messages", description = "Retrieve all messages, optionally filtered by status, sourceNumber, or destinationNumber.")
     public Response getMessages(
-            @QueryParam("status") String status,
-            @QueryParam("sourceNumber") String sourceNumber,
-            @QueryParam("destinationNumber") String destinationNumber) {
+            @Parameter(description = "Filter by message status") @QueryParam("status") String status,
+            @Parameter(description = "Filter by source phone number") @QueryParam("sourceNumber") String sourceNumber,
+            @Parameter(description = "Filter by destination phone number") @QueryParam("destinationNumber") String destinationNumber) {
 
         if (status != null && !status.isBlank()) {
             return Response.ok(Message.list("status", status)).build();
@@ -71,7 +86,11 @@ public class MessageResource {
 
     @PUT
     @Path("/{id}/simulate")
-    public Response simulateMessage(@PathParam("id") UUID id) {
+    @Operation(summary = "Simulate message delivery", description = "Forces a delivery simulation for a specific message.")
+    @APIResponse(responseCode = "200", description = "Simulation executed")
+    @APIResponse(responseCode = "404", description = "Message not found")
+    public Response simulateMessage(
+            @Parameter(description = "UUID of the message to simulate") @PathParam("id") UUID id) {
         Message message = Message.findById(id);
 
         if (message == null) {
@@ -81,5 +100,4 @@ public class MessageResource {
         messageService.simulateDelivery(id);
         return Response.ok(message).build();
     }
-
 }
