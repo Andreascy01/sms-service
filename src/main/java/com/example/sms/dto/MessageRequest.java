@@ -7,11 +7,11 @@ import jakarta.validation.constraints.Size;
 public class MessageRequest {
 
     @NotBlank(message = "Source number is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid source phone number format")
+    @Pattern(regexp = "^\\+?[1-9][0-9]{1,14}$", message = "Invalid source phone number format")
     public String sourceNumber;
 
     @NotBlank(message = "Destination number is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid destination phone number format")
+    @Pattern(regexp = "^\\+?[1-9][0-9]{1,14}$", message = "Invalid destination phone number format")
     public String destinationNumber;
 
     @NotBlank(message = "Content cannot be empty")
