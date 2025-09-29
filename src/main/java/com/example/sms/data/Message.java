@@ -1,4 +1,4 @@
-package com.example.sms;
+package com.example.sms.data;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;

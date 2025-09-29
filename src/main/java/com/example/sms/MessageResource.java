@@ -1,7 +1,9 @@
 package com.example.sms;
 
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+
+import com.example.sms.data.Message;
 import com.example.sms.dto.MessageRequest;
-import com.example.sms.Message;
 import com.example.sms.service.MessageService;
 
 import jakarta.inject.Inject;
@@ -20,6 +22,16 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * REST resource exposing the messaging API.
+ * 
+ * Responsibilities:
+ * - Accept new messages (validating the request)
+ * - Persist messages into the database
+ * - Simulate delivery asynchronously
+ * - Provide endpoints to fetch or filter messages
+ */
+
 @Path("/messages")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
@@ -28,12 +40,20 @@ public class MessageResource {
     @Inject
     MessageService messageService;
 
+    /**
+     * Send a new message.
+     *
+     * @param request Message payload containing source, destination and content
+     * @return Response containing the persisted message with status PENDING
+     */
+
     @POST
     @Transactional
     @Operation(summary = "Send a message", description = "Creates a new message with status PENDING and simulates sending it asynchronously.")
     @APIResponse(responseCode = "202", description = "Message accepted for processing", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Message.class)))
     @APIResponse(responseCode = "400", description = "Invalid request body")
-    public Response sendMessage(@Valid MessageRequest request) {
+    public Response sendMessage(
+            @RequestBody(description = "Message request payload", required = true, content = @Content(schema = @Schema(implementation = MessageRequest.class))) @Valid MessageRequest request) {
         Message message = new Message();
         message.id = UUID.randomUUID();
         message.sourceNumber = request.sourceNumber;
@@ -43,13 +63,21 @@ public class MessageResource {
         message.createdAt = LocalDateTime.now();
         message.updatedAt = LocalDateTime.now();
 
+        // Save to database using Panache
         message.persist();
 
+        // Trigger async delivery simulation (will later update status)
         messageService.simulateDeliveryAsync(message.id);
 
         return Response.status(Response.Status.ACCEPTED).entity(message).build();
     }
 
+    /**
+     * Get a single message by its ID.
+     *
+     * @param id UUID of the message
+     * @return Response containing the message or 404 if not found
+     */
     @GET
     @Path("/{id}")
     @Operation(summary = "Get a message by ID", description = "Retrieve a single message by its UUID.")
@@ -63,6 +91,17 @@ public class MessageResource {
         }
         return Response.ok(message).build();
     }
+
+    /**
+     * List all messages, optionally filtered by status, sourceNumber, or
+     * destinationNumber.
+     *
+     * @param status            Filter messages by status (e.g., PENDING, DELIVERED,
+     *                          FAILED)
+     * @param sourceNumber      Filter messages by the sender's number
+     * @param destinationNumber Filter messages by the receiver's number
+     * @return Response containing the list of matching messages
+     */
 
     @GET
     @Operation(summary = "List messages", description = "Retrieve all messages, optionally filtered by status, sourceNumber, or destinationNumber.")
@@ -84,6 +123,12 @@ public class MessageResource {
         return Response.ok(Message.listAll()).build();
     }
 
+    /**
+     * Manually simulate message delivery for a given message.
+     *
+     * @param id UUID of the message
+     * @return Response with updated message or 404 if not found
+     */
     @PUT
     @Path("/{id}/simulate")
     @Operation(summary = "Simulate message delivery", description = "Forces a delivery simulation for a specific message.")
