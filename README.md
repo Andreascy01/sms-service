@@ -14,7 +14,7 @@ The project demonstrates persistence with Hibernate ORM (Panache), input validat
 - **Simulate delivery** (`DELIVERED` or `FAILED`) asynchronously.
 - **Error handling** with descriptive responses for invalid requests.
 - **API documentation** using Swagger UI (`/q/swagger-ui`).
-- **Unit tests** using JUnit 5, RestAssured, and Mockito.
+- **Unit tests** using JUnit 5.
 
 ---
 
